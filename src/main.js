@@ -68,12 +68,10 @@ async function simpleHash(str) {
 async function updateBalance() {
   if (!client) return;
   try {
-    const balance = await client.query('sphere_getBalance');
-    if (balance && balance.total !== undefined) {
-      balanceBadge.textContent = `💰 ${balance.total} UCT`;
-    } else if (balance) {
-      balanceBadge.textContent = `💰 ${JSON.stringify(balance)}`;
-    }
+    const assets = await client.query('sphere_getBalance');
+    const uct = Array.isArray(assets) ? assets.find(a => a.symbol === 'UCT') : null;
+    const amount = uct ? Number(uct.totalAmount) / 10 ** uct.decimals : 0;
+    balanceBadge.textContent = `💰 ${amount} UCT`;
   } catch (e) {
     balanceBadge.textContent = '💰 Balance: (refresh to load)';
   }
