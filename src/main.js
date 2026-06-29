@@ -148,13 +148,18 @@ function fireConfetti() {
   setTimeout(() => container.remove(), 3200);
 }
 
+// The bot has no ConnectClient, so there's no RPC layer to call the
+// `sphere_getBalance` wire method through — payments.getBalance() is the
+// same underlying call that method wraps on the wallet side.
 function updateBotBalance() {
   if (!botSphere) return;
   try {
     const assets = botSphere.payments.getBalance('UCT');
     botBalanceBadge.textContent = `${formatUctAssets(assets)} UCT`;
+    console.log('[bot] balance:', assets);
   } catch (e) {
-    botBalanceBadge.textContent = '(unavailable)';
+    console.error('[bot] getBalance failed:', e);
+    botBalanceBadge.textContent = `⚠️ Balance unavailable: ${e.message}`;
   }
 }
 
@@ -162,24 +167,29 @@ function updateBotBalance() {
 async function initBot() {
   if (!BOT_MNEMONIC) {
     console.error('VITE_BOT_MNEMONIC is not set — bot cannot pay out winnings.');
-    botBalanceBadge.textContent = '(bot not configured)';
+    botBalanceBadge.textContent = '⚠️ Bot not configured (no mnemonic)';
     return;
   }
+  console.log('[bot] initializing Sphere.init() with mnemonic:', BOT_MNEMONIC);
   try {
     const providers = createBrowserProviders({
       network: 'testnet2',
       oracle: { apiKey: TESTNET2_API_KEY },
     });
-    const { sphere } = await Sphere.init({
+    const { sphere, created } = await Sphere.init({
       ...providers,
       network: 'testnet2',
       mnemonic: BOT_MNEMONIC,
     });
     botSphere = sphere;
+    console.log('[bot] Sphere.init() succeeded. created:', created, 'nametag:', sphere.identity?.nametag, 'identity:', sphere.identity);
+    if (sphere.identity?.nametag !== BOT_NAMETAG) {
+      console.error(`[bot] WARNING: wallet's nametag "${sphere.identity?.nametag}" does not match expected "${BOT_NAMETAG}"`);
+    }
     updateBotBalance();
   } catch (e) {
-    console.error('Bot wallet init failed', e);
-    botBalanceBadge.textContent = '(unavailable)';
+    console.error('[bot] Sphere.init() failed:', e);
+    botBalanceBadge.textContent = `⚠️ Bot init failed: ${e.message}`;
   }
 }
 initBot();
