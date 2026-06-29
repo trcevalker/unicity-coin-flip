@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎲 Unicity Dice Duel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d0d1a;
+      color: #e0e0ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin: 20px 0 4px;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle { color: #6b7280; font-size: 0.9rem; margin-bottom: 30px; }
+    .card {
+      background: #13132b;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 1rem; color: #a78bfa; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+    label { display: block; font-size: 0.8rem; color: #9ca3af; margin-bottom: 4px; margin-top: 12px; }
+    input {
+      width: 100%; padding: 10px 14px;
+      background: #1e1e3a; border: 1px solid #3a3a5a;
+      border-radius: 8px; color: #e0e0ff; font-size: 0.95rem; outline: none;
+    }
+    input:focus { border-color: #a78bfa; }
+    button {
+      width: 100%; padding: 12px; margin-top: 14px;
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; }
+    .btn-success { background: linear-gradient(135deg, #059669, #0891b2); color: white; }
+    .btn-connect {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white; font-size: 1.1rem; padding: 16px;
+    }
+    .status-bar {
+      background: #1e1e3a; border: 1px solid #3a3a5a;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 0.85rem; color: #9ca3af;
+      margin-top: 12px; min-height: 40px; word-break: break-all;
+    }
+    .status-bar.success { border-color: #059669; color: #34d399; }
+    .status-bar.error   { border-color: #dc2626; color: #f87171; }
+    .status-bar.info    { border-color: #4f46e5; color: #a5b4fc; }
+    .identity-box {
+      display: flex; align-items: center; gap: 10px;
+      background: #1e1e3a; border-radius: 8px; padding: 10px 14px; margin-top: 8px;
+    }
+    .avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0;
+    }
+    .balance-badge {
+      display: inline-block; background: #2a2a4a;
+      border: 1px solid #f97316; border-radius: 20px;
+      padding: 4px 14px; font-size: 0.9rem; color: #fb923c; margin-top: 10px;
+    }
+    .dice-area { display: flex; justify-content: center; gap: 24px; margin: 20px 0; }
+    .dice-container { text-align: center; }
+    .dice-container small { display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 6px; }
+    .dice {
+      width: 80px; height: 80px; background: #1e1e3a;
+      border: 2px solid #3a3a5a; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; transition: transform 0.3s, border-color 0.3s;
+    }
+    .dice.winner { border-color: #059669; box-shadow: 0 0 16px #05966940; }
+    .dice.loser  { border-color: #dc2626; box-shadow: 0 0 16px #dc262640; }
+    .dice.rolling { animation: shake 0.4s ease-in-out; }
+    @keyframes shake {
+      0%,100%{transform:rotate(0)} 20%{transform:rotate(-12deg)}
+      40%{transform:rotate(12deg)} 60%{transform:rotate(-8deg)} 80%{transform:rotate(8deg)}
+    }
+    .result-banner {
+      text-align: center; padding: 14px; border-radius: 12px;
+      font-size: 1.2rem; font-weight: 700; margin: 12px 0; display: none;
+    }
+    .result-banner.win  { background:#05966920; border:1px solid #059669; color:#34d399; display:block; }
+    .result-banner.lose { background:#dc262620; border:1px solid #dc2626; color:#f87171; display:block; }
+    .result-banner.tie  { background:#4f46e520; border:1px solid #4f46e5; color:#a5b4fc; display:block; }
+    .tx-link { font-size: 0.78rem; color: #6b7280; margin-top: 6px; }
+    .tx-link a { color: #a78bfa; text-decoration: none; }
+    .stats-row { display: flex; gap: 10px; margin-top: 8px; }
+    .stat-box { flex:1; background:#1e1e3a; border-radius:8px; padding:10px; text-align:center; }
+    .stat-box .val { font-size:1.4rem; font-weight:700; }
+    .stat-box .lbl { font-size:0.7rem; color:#6b7280; margin-top:2px; }
+    .val.green{color:#34d399} .val.red{color:#f87171} .val.blue{color:#60a5fa}
+    .section-divider { border:none; border-top:1px solid #2a2a4a; margin:16px 0; }
+    .hidden { display: none !important; }
+    .spinner {
+      display:inline-block; width:14px; height:14px;
+      border:2px solid #ffffff40; border-top-color:#fff;
+      border-radius:50%; animation:spin 0.7s linear infinite;
+      vertical-align:middle; margin-right:6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .extension-hint {
+      background: #1a1a0d; border: 1px solid #f97316;
+      border-radius: 10px; padding: 14px; margin-top: 12px;
+      font-size: 0.85rem; color: #fb923c; line-height: 1.7;
+    }
+    footer { margin-top:30px; color:#374151; font-size:0.78rem; text-align:center; }
+    footer a { color:#6b7280; }
+  </style>
+</head>
+<body>
+
+  <h1>🎲 Unicity Dice Duel</h1>
+  <p class="subtitle">Peer-to-peer dice betting on Unicity Testnet · Built with Sphere SDK</p>
+
+  <!-- CONNECT -->
+  <div class="card" id="walletCard">
+    <h2>🔗 Connect Your Wallet</h2>
+
+    <button class="btn-connect" id="connectBtn">🟠 Connect Sphere Wallet</button>
+
+    <div class="extension-hint">
+      <strong>Sphere Wallet</strong> extension gerekli.<br>
+      Zaten kuruluysa butona tıkla → extension onay penceresi açılır → <strong>Approve</strong> de.<br>
+      <br>
+      Kurulu değilse: <a href="https://github.com/unicity-sphere/sphere-extension/releases" target="_blank" style="color:#f97316">GitHub Releases</a>'dan indir → Chrome'a ekle.
+    </div>
+
+    <div id="walletInfo" class="hidden">
+      <div class="identity-box">
+        <div class="avatar">🎲</div>
+        <div>
+          <div id="identityLabel" style="font-weight:600; font-size:1.1rem"></div>
+          <div style="font-size:0.75rem; color:#6b7280; margin-top:2px">Sphere Wallet · Testnet</div>
+        </div>
+      </div>
+      <div id="balanceBadge" class="balance-badge">💰 Loading…</div>
+      <button class="btn-primary" id="refreshBalanceBtn" style="background:#1e1e3a; border:1px solid #3a3a5a; color:#a5b4fc; margin-top:10px">↻ Refresh Balance</button>
+    </div>
+
+    <div class="status-bar" id="walletStatus">Sphere Wallet extension'ını bağlamak için butona tıkla.</div>
+  </div>
+
+  <!-- GAME -->
+  <div class="card hidden" id="gameCard">
+    <h2>🎮 Play</h2>
+
+    <label>Opponent's Unicity ID</label>
+    <input id="opponentInput" type="text" placeholder="@opponent nametag" />
+
+    <label>Bet Amount (UCT base units)</label>
+    <input id="betInput" type="number" value="100000" min="1" />
+    <small style="color:#6b7280; font-size:0.75rem; margin-top:4px; display:block">100000 base units = 0.1 UCT</small>
+
+    <button class="btn-success" id="rollBtn">🎲 Roll Dice &amp; Bet</button>
+
+    <div class="dice-area">
+      <div class="dice-container">
+        <small>You</small>
+        <div class="dice" id="myDice">⚀</div>
+      </div>
+      <div style="align-self:center; font-size:1.5rem; color:#6b7280">VS</div>
+      <div class="dice-container">
+        <small>Opponent</small>
+        <div class="dice" id="oppDice">⚀</div>
+      </div>
+    </div>
+
+    <div class="result-banner" id="resultBanner"></div>
+    <div class="tx-link hidden" id="txInfo"></div>
+
+    <hr class="section-divider" />
+
+    <div class="stats-row">
+      <div class="stat-box"><div class="val green" id="winsCount">0</div><div class="lbl">Wins</div></div>
+      <div class="stat-box"><div class="val red" id="lossesCount">0</div><div class="lbl">Losses</div></div>
+      <div class="stat-box"><div class="val blue" id="tiesCount">0</div><div class="lbl">Ties</div></div>
+    </div>
+
+    <div class="status-bar" id="gameStatus">Opponent ID ve bahis miktarını gir, zarları at!</div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="card">
+    <h2>ℹ️ How It Works</h2>
+    <ul style="padding-left:18px; line-height:1.8; font-size:0.88rem; color:#9ca3af">
+      <li>Sphere Wallet extension'ınla bağlan — mevcut hesabın kullanılır.</li>
+      <li>Her iki oyuncu 1–6 arası zar atar.</li>
+      <li>Kaybeden, Sphere extension üzerinden bahis miktarını onaylayıp gönderir.</li>
+      <li>Beraberlikte token transferi olmaz.</li>
+      <li>Tüm işlemler Unicity Testnet2 üzerinde gerçekleşir.</li>
+    </ul>
+  </div>
+
+  <footer>
+    Unicity Dice Duel · Sphere SDK + ConnectClient · <a href="https://sphere.unicity.network" target="_blank">sphere.unicity.network</a>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
