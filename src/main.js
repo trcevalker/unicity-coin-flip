@@ -224,6 +224,15 @@ async function initBot() {
     if (sphere.identity?.nametag !== BOT_NAMETAG) {
       console.error(`[bot] WARNING: wallet's nametag "${sphere.identity?.nametag}" does not match expected "${BOT_NAMETAG}"`);
     }
+    // Sync first so incoming transfers are visible before querying balance/tokens.
+    try {
+      await sphere.payments.sync?.();
+      console.log('[bot] payments.sync() done');
+    } catch (syncErr) {
+      console.warn('[bot] payments.sync() failed:', syncErr.message);
+    }
+    // Wait briefly for relay discovery to settle, then read balance.
+    await new Promise(r => setTimeout(r, 3000));
     updateBotBalance();
   } catch (e) {
     console.error('[bot] Sphere.init() failed:', e);
