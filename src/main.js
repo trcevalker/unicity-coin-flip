@@ -46,6 +46,7 @@ let myNametag = '';
 let botSphere = null;    // bot's own Sphere instance — signs/sends autonomously
 let choice = null;       // 'heads' | 'tails'
 let stats = { wins: 0, losses: 0 };
+let uctCoinId = null;     // real hex coinId for UCT, read from sphere_getBalance
 
 // ── Helpers ─────────────────────────────────────────────────
 function setStatus(el, msg, type = '') {
@@ -63,8 +64,12 @@ function resetBtn(btn, text) {
   btn.innerHTML = text;
 }
 
+function findUctAsset(assets) {
+  return Array.isArray(assets) ? assets.find(a => a.symbol === 'UCT') : null;
+}
+
 function formatUctAssets(assets) {
-  const uct = Array.isArray(assets) ? assets.find(a => a.symbol === 'UCT') : null;
+  const uct = findUctAsset(assets);
   return uct ? Number(uct.totalAmount) / 10 ** uct.decimals : 0;
 }
 
@@ -72,6 +77,8 @@ async function updateBalance() {
   if (!client) return;
   try {
     const assets = await client.query('sphere_getBalance');
+    const uct = findUctAsset(assets);
+    if (uct) uctCoinId = uct.coinId;
     balanceBadge.textContent = `💰 ${formatUctAssets(assets)} UCT`;
   } catch (e) {
     balanceBadge.textContent = '💰 Balance: (refresh to load)';
@@ -247,13 +254,29 @@ flipBtn.addEventListener('click', async () => {
 
       setStatus(gameStatus, `⏳ Sending ${betUct} UCT to @${BOT_NAMETAG}…`, 'info');
 
+      if (!uctCoinId) {
+        // Not cached yet — read it from sphere_getBalance before sending.
+        try {
+          const assets = await client.query('sphere_getBalance');
+          const uct = findUctAsset(assets);
+          if (uct) uctCoinId = uct.coinId;
+        } catch (e) {
+          console.error('Failed to resolve UCT coinId from sphere_getBalance', e);
+        }
+      }
+      if (!uctCoinId) {
+        setStatus(gameStatus, '❌ Could not resolve UCT coinId from your wallet balance.', 'error');
+        resetBtn(flipBtn, '🪙 Flip Coin & Bet');
+        return;
+      }
+
       try {
         // Use extension intent — pops up approval in Sphere extension.
         // Wire param is `to`, not `recipient` (Sphere Connect protocol).
         const tx = await client.intent('send', {
           to: `@${BOT_NAMETAG}`,
           amount: String(bet),
-          coinId: 'UCT',
+          coinId: uctCoinId,
         });
 
         setStatus(gameStatus, `✅ Sent ${betUct} UCT to @${BOT_NAMETAG}!`, 'success');
