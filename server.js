@@ -13,7 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TESTNET2_API_KEY = 'sk_ddc3cfcc001e4a28ac3fad7407f99590';
 const DATA_DIR = process.env.BOT_DATA_DIR || path.join(__dirname, 'bot-wallet-data');
 const PORT = process.env.PORT || 3001;
-const SYNC_INTERVAL_MS = 20_000;
 
 let botSphere = null;
 
@@ -26,39 +25,13 @@ async function initBot() {
     dataDir: DATA_DIR,
     tokensDir: path.join(DATA_DIR, 'tokens'),
     oracle: { apiKey: TESTNET2_API_KEY },
-    transport: { debug: true },
-    debug: true,
-  });
-
-  console.log('[bot] transport relays:', JSON.stringify(providers.transport?.relays ?? providers.transport));
-
-  // Raw listener directly on the transport, bypassing the Payments module,
-  // to see if ANY token-transfer event ever reaches this process at all.
-  providers.transport.onTokenTransfer?.((transfer) => {
-    console.log('[bot] RAW onTokenTransfer fired:', JSON.stringify(transfer));
   });
 
   const { sphere } = await Sphere.init({ ...providers, network: 'testnet2', mnemonic });
   console.log('[bot] Sphere.init() done. nametag:', sphere.identity?.nametag,
               'address:', sphere.identity?.directAddress);
 
-  try { await sphere.payments.sync?.(); } catch (e) { console.warn('[bot] initial sync error:', e.message); }
-
   botSphere = sphere;
-
-  // Keep relay subscription alive and log balance periodically so incoming
-  // transfers are received while this process is running.
-  setInterval(async () => {
-    try {
-      await sphere.payments.sync?.();
-      const assets = await sphere.payments.getAssets?.().catch(() => []);
-      const uct = Array.isArray(assets) ? assets.find(a => a.symbol === 'UCT') : null;
-      console.log('[bot] heartbeat — UCT balance:', uct ? uct.totalAmount : '0',
-                  'transport connected:', providers.transport?.isConnected?.());
-    } catch (e) {
-      console.warn('[bot] heartbeat sync failed:', e.message);
-    }
-  }, SYNC_INTERVAL_MS);
 }
 
 const app = express();
@@ -88,24 +61,26 @@ app.post('/payout', async (req, res) => {
   }
 
   try {
-    const assets = await botSphere.payments.getAssets?.().catch(() => []);
-    console.log('[payout] assets before send:', JSON.stringify(assets));
+    // Testnet2 has no faucet and incoming P2P transfers from the Sphere
+    // extension aren't discoverable by this SDK session (confirmed: extension
+    // sends never appear as kind-31113 events on the public relay this SDK
+    // listens to). So self-mint exactly the payout amount right before
+    // sending it, instead of depending on a pre-funded balance.
+    const mintResult = await botSphere.payments.mintFungibleToken(coinId, BigInt(amount));
+    if (!mintResult?.success) {
+      throw new Error(`Mint failed: ${mintResult?.error ?? 'unknown error'}`);
+    }
+    console.log('[payout] minted token:', mintResult.tokenId, 'amount:', amount);
 
     const tx = await botSphere.payments.send({ recipient, coinId, amount: String(amount) });
     console.log('[payout] send() succeeded tx:', JSON.stringify(tx));
 
-    const assetsAfter = await botSphere.payments.getAssets?.().catch(() => []);
-    const botBalance = Array.isArray(assetsAfter)
-      ? (assetsAfter.find(a => a.symbol === 'UCT')?.totalAmount ?? '0')
-      : '0';
-
-    return res.json({ ok: true, tx, botBalance });
+    return res.json({ ok: true, tx });
   } catch (e) {
     console.error('[payout] failed:', e.message);
     return res.status(500).json({ error: e.message });
   }
 });
 
-// Start bot init then listen — requests that arrive before init completes get 503.
 initBot().catch(e => console.error('[bot] init failed:', e.message));
 app.listen(PORT, () => console.log(`Bot server on port ${PORT}`));
