@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.js"
   },
   "dependencies": {
     "@unicitylabs/sphere-sdk": "^0.10.1",
     "@unicitylabs/state-transition-sdk": "^2.0.0-rc.68bc1e5",
+    "express": "^5.2.1",
     "ws": "^8.21.0"
   },
   "devDependencies": {

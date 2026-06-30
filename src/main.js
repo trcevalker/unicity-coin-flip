@@ -12,6 +12,7 @@ import { createBrowserProviders } from '@unicitylabs/sphere-sdk/impl/browser';
 const TESTNET2_API_KEY = 'sk_ddc3cfcc001e4a28ac3fad7407f99590';
 const BOT_NAMETAG = 'dicebot2';
 const BOT_MNEMONIC = import.meta.env.VITE_BOT_MNEMONIC;
+const PAYOUT_URL = import.meta.env.VITE_PAYOUT_URL || '/api/payout';
 const MIN_BET_UCT = 0.1;
 const MAX_BET_UCT = 10;
 
@@ -379,7 +380,7 @@ flipBtn.addEventListener('click', async () => {
       try {
         if (!uctCoinId) throw new Error('Could not resolve UCT coinId — connect wallet first');
         console.log('[payout] calling /api/payout recipient:', myNametag, 'amount:', bet, 'coinId:', uctCoinId);
-        const res = await fetch('/api/payout', {
+        const res = await fetch(PAYOUT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ recipient: `@${myNametag}`, amount: String(bet), coinId: uctCoinId }),
