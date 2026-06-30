@@ -274,7 +274,7 @@ flipBtn.addEventListener('click', async () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Payout API error ${res.status}`);
 
-        setStatus(gameStatus, `✅ @${BOT_NAMETAG} sent you ${betUct} UCT!`, 'success');
+        setStatus(gameStatus, `✅ @${BOT_NAMETAG} sent you ${betUct} UCT! (may take a moment to appear in your wallet)`, 'success');
         if (data.tx?.id) {
           txInfo.innerHTML = `📝 TX: ${data.tx.id}`;
           txInfo.classList.remove('hidden');
